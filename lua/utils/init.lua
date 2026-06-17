@@ -51,8 +51,7 @@ end
 
 M.toggle_option = function(option_name)
   local buf = vim.api.nvim_get_current_buf()
-  local value = vim.api.nvim_buf_get_option(buf, option_name)
-  vim.api.nvim_buf_set_option(buf, option_name, not value)
+  vim.bo[buf][option_name] = not vim.bo[buf][option_name]
 end
 
 M.close_windowless_buffers = function()
@@ -66,7 +65,7 @@ M.close_windowless_buffers = function()
 
   for _, buf in ipairs(all_buffers) do
     if not visible_buffers[buf] then
-      if not vim.api.nvim_buf_get_option(buf, 'modified') then
+      if not vim.bo[buf].modified then
         vim.api.nvim_buf_delete(buf, { force = true })
       else
         local choice = vim.fn.confirm(('Save changes to %q?'):format(vim.fn.bufname()), '&Yes\n&No\n&Cancel')
