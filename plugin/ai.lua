@@ -30,6 +30,26 @@ require('sidekick').setup {
   },
 }
 
+-- Inline visualization of what the CLI agent (Claude Code) changes, driven by
+-- Claude hooks that reach this nvim over its RPC socket. Visualize-only; the
+-- accept/reject decision stays in the sidekick chat.
+require('agent-diff').setup {}
+
+vim.keymap.set('n', '<leader>aD', '<cmd>AgentDiffClear<cr>', { desc = 'Clear agent inline diffs' })
+
+vim.keymap.set('n', ']a', function()
+  require('agent-diff').navigate(1)
+end, { desc = 'Next agent edit' })
+vim.keymap.set('n', '[a', function()
+  require('agent-diff').navigate(-1)
+end, { desc = 'Prev agent edit' })
+vim.keymap.set('n', '<leader>aR', function()
+  require('agent-diff').reload()
+end, { desc = 'Reload agent-diff plugin' })
+vim.keymap.set('n', '<leader>aN', function()
+  require('agent-diff').toggle_autodisplay()
+end, { desc = 'Toggle agent-diff auto-display' })
+
 -- Make Shift+Enter send the correct sequence in neovim terminal buffers (for Claude Code)
 vim.keymap.set('t', '<S-Enter>', function()
   local chan = vim.b.terminal_job_id
@@ -37,6 +57,26 @@ vim.keymap.set('t', '<S-Enter>', function()
     vim.api.nvim_chan_send(chan, '\x1b[13;2u')
   end
 end, { desc = 'Send Shift+Enter to terminal' })
+
+-- Equalize splits when the sidekick CLI panel opens. The panel reuses a single
+-- session across toggles, so SidekickCliAttach only fires on first open; instead
+-- we watch for the panel window itself, which sidekick tags with a window var.
+vim.api.nvim_create_autocmd('WinNew', {
+  desc = 'Resize splits when the sidekick panel opens',
+  group = vim.api.nvim_create_augroup('sidekick-resize-splits', { clear = true }),
+  callback = function()
+    -- The panel is opened with enter=false, so it isn't the current window on
+    -- WinNew. Defer (so window-local vars are set) then scan for the panel.
+    vim.schedule(function()
+      for _, win in ipairs(vim.api.nvim_list_wins()) do
+        if vim.w[win].sidekick_cli ~= nil then
+          vim.cmd 'wincmd ='
+          return
+        end
+      end
+    end)
+  end,
+})
 
 vim.keymap.set({ 'n', 'i' }, '<tab>', function()
   if not require('sidekick').nes_jump_or_apply() then

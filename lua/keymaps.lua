@@ -1,7 +1,16 @@
 local utils = require 'utils'
 
+-- Set highlight on search, but clear on pressing <Esc> in normal mode. Esc also
+-- hides the inline agent diff when one is showing (see plugin/ai.lua). Kept as one
+-- map so the two behaviors don't clobber each other with duplicate <Esc> bindings.
 vim.opt.hlsearch = true
-vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
+vim.keymap.set('n', '<Esc>', function()
+  local agent_diff = require 'agent-diff'
+  if agent_diff.is_showing() then
+    agent_diff.clear()
+  end
+  vim.cmd 'nohlsearch'
+end, { desc = 'Hide agent inline diff / clear search highlight' })
 
 vim.keymap.set('n', '[d', function()
   vim.diagnostic.jump { count = -1, wrap = false }
